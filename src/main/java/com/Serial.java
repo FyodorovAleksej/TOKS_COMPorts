@@ -1,5 +1,4 @@
 package com;
-
 import jssc.SerialPort;
 import jssc.SerialPortEventListener;
 import jssc.SerialPortException;
@@ -22,9 +21,9 @@ public class Serial implements SerialInterface {
      * @param bytes - the bytes for writing
      * @return is writing finish successfully
      */
-    public boolean write(byte[] bytes) {
+    public boolean write(byte[] bytes, String address, String source) {
         try {
-            return port.writeBytes(incapsulate(bytes));
+            return port.writeBytes(incapsulate(bytes, address, source));
         }
         catch (SerialPortException ex) {
             ex.printStackTrace();
@@ -162,22 +161,50 @@ public class Serial implements SerialInterface {
         return toReturn;
     }
 
-    private byte[] incapsulate(byte[] raw) {
+    private byte[] incapsulate(byte[] raw, String address, String source) {
         String resString = toBinary(raw).replaceAll("11111","111110");
-        resString = "01111110" + resString;
+        resString = "01111110" + toBinary(address.getBytes()).replaceAll("11111","111110") + "01111110" + toBinary(source.getBytes()).replaceAll("11111","111110") + "01111110" + resString;
+        boolean parity = false;
+        for (int i = 0; i < resString.length(); i++) {
+            if (resString.charAt(i) == '1') {
+                parity = !parity;
+            }
+        }
+        if (parity) {
+            resString = resString + "1";
+        }
+        else {
+            resString = resString + "0";
+        }
         return fromBinary(resString);
     }
 
     private byte[] decapsulate(byte[] complex) {
         String temp = toBinary(complex);
-        int start = temp.indexOf("01111110");
-        if (start >= 0) {
-            temp = temp.substring(start + 8);
-            temp = temp.replaceAll("111110", "11111");
-            return fromBinary(temp);
+        boolean parity = false;
+        for (int i = 0; i < temp.length(); i++) {
+            if (temp.charAt(i) == '1') {
+                parity = !parity;
+            }
         }
-        else {
-            return null;
+        if (!parity) {
+            temp = temp.substring(0,temp.length() - Byte.SIZE);
+            int start = temp.indexOf("01111110");
+            if (start >= 0) {
+                temp = temp.substring(start + 8);
+                String[] reading = temp.split("01111110");
+                if (reading.length > 1) {
+                    reading[0] = reading[0].replaceAll("111110", "11111");
+                    String address = new String(fromBinary(reading[0]));
+                    reading[1] = reading[1].replaceAll("111110", "11111");
+                    String source = new String(fromBinary(reading[1]));
+                    System.out.println("source = " + source);
+                    if (address.equals(port.getPortName())) {
+                        return fromBinary(reading[2].replaceAll("111110", "11111"));
+                    }
+                }
+            }
         }
+        return null;
     }
 }

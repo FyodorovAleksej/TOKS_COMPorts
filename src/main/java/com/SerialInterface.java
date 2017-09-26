@@ -2,7 +2,7 @@ package com;
 
 public interface SerialInterface {
 
-    boolean write(byte[] bytes);
+    boolean write(byte[] bytes, String address, String source);
 
     byte[] read(int bytesCount);
 

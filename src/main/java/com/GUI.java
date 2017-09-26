@@ -24,6 +24,7 @@ public class GUI {
     private static Serial serialPort;
     private static JComboBox<String> speedBox;
     private static JComboBox<String> portsBox;
+    private static JComboBox<String> adressBox;
 
 
     /**
@@ -47,13 +48,20 @@ public class GUI {
         String[] ports = SerialPortList.getPortNames();
         JPanel allPanel = new JPanel();
 
+        String[] adresses = SerialPortList.getPortNames();
+        adressBox = new JComboBox<String>(adresses);
 
         allPanel.setLayout(new BorderLayout());
         portsBox = new JComboBox<String>(ports);
         for (String s : ports) {
             System.out.println(s);
         }
-        allPanel.add(portsBox, BorderLayout.WEST);
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new GridLayout(2,1));
+        leftPanel.add(portsBox);
+        leftPanel.add(adressBox);
+
+        allPanel.add(leftPanel, BorderLayout.WEST);
 
         String[] bounds = {"110", "300", "600", "1200", "4800", "9600", "14400", "19200", "38400", "57600", "115200", "128000", "256000"};
         speedBox = new JComboBox<String>(bounds);
@@ -110,10 +118,14 @@ public class GUI {
          */
         public void serialEvent(SerialPortEvent event) {
             if(event.isRXCHAR() && event.getEventValue() > 0) {
-                String result = new String(serialPort.read(event.getEventValue()));
-                responseLabel.setText("Response: " + result);
-                Calendar calendar = new GregorianCalendar();
-                infoLabel.setText("Info: " + Long.toString(calendar.getTimeInMillis()) + " - reading");
+                byte[] readBytes = serialPort.read(event.getEventValue());
+                if (readBytes != null) {
+                    String result = new String(readBytes);
+                    responseLabel.setText("Response: " + result);
+                    System.out.println(result);
+                    Calendar calendar = new GregorianCalendar();
+                    infoLabel.setText("Info: " + Long.toString(calendar.getTimeInMillis()) + " - reading");
+                }
             }
         }
     }
@@ -140,28 +152,8 @@ public class GUI {
      * send text of textArea to COM port
      */
     private void sendActionPerformed() {
-
         connectActionPerformed();
-
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream("temp.out");
-            ObjectOutputStream oos = null;
-            oos = new ObjectOutputStream(fos);
-            String ts = textField.getText();
-
-            oos.writeObject(ts);
-            oos.flush();
-            oos.close();
-
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-
-        
-
-        serialPort.write(textField.getText().getBytes());
+        serialPort.write(textField.getText().getBytes(), adressBox.getSelectedItem().toString(), portsBox.getSelectedItem().toString());
         Calendar calendar = new GregorianCalendar();
         infoLog(Long.toString(calendar.getTimeInMillis()) + " - sending");
     }

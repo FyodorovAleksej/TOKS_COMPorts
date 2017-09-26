@@ -56,7 +56,7 @@ public class SerialTest extends TestCase {
     public void testWrite() throws Exception {
         if (start) {
             String test = "Test String\nTest String2";
-            serialPort1.write(test.getBytes());
+            serialPort1.write(test.getBytes(), "COM2", "COM1");
             assertEquals(new String(serialPort2.read(test.length())), test);
         }
     }
@@ -64,8 +64,8 @@ public class SerialTest extends TestCase {
     public void testRead() throws Exception {
         if (start) {
             String test = "Test String\nTest String2";
-            serialPort1.write(test.getBytes());
-            serialPort1.write(test.getBytes());
+            serialPort1.write(test.getBytes(), "COM2", "COM2");
+            serialPort1.write(test.getBytes(), "COM2", "COM1");
             assertEquals(new String(serialPort2.read(2 * test.length())), test + test);
         }
     }
