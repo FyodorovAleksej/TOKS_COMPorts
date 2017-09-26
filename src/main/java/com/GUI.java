@@ -9,6 +9,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.*;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 public class GUI {
 
@@ -109,7 +112,8 @@ public class GUI {
             if(event.isRXCHAR() && event.getEventValue() > 0) {
                 String result = new String(serialPort.read(event.getEventValue()));
                 responseLabel.setText("Response: " + result);
-                infoLabel.setText("Info: " + Long.toString(System.currentTimeMillis()) + " - reading");
+                Calendar calendar = new GregorianCalendar();
+                infoLabel.setText("Info: " + Long.toString(calendar.getTimeInMillis()) + " - reading");
             }
         }
     }
@@ -123,6 +127,12 @@ public class GUI {
         for (String s : ports) {
             portsBox.addItem(s);
         }
+        if (ports.length == 0) {
+            sendButton.setEnabled(false);
+        }
+        else {
+            sendButton.setEnabled(true);
+        }
         infoLog("port list was refreshed");
     }
 
@@ -133,8 +143,27 @@ public class GUI {
 
         connectActionPerformed();
 
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream("temp.out");
+            ObjectOutputStream oos = null;
+            oos = new ObjectOutputStream(fos);
+            String ts = textField.getText();
+
+            oos.writeObject(ts);
+            oos.flush();
+            oos.close();
+
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+
+        
+
         serialPort.write(textField.getText().getBytes());
-        infoLog(Long.toString(System.currentTimeMillis()) + " - sending");
+        Calendar calendar = new GregorianCalendar();
+        infoLog(Long.toString(calendar.getTimeInMillis()) + " - sending");
     }
 
     /**
@@ -151,8 +180,8 @@ public class GUI {
                 SerialPort.DATABITS_8,
                 SerialPort.STOPBITS_1,
                 SerialPort.PARITY_NONE);
-        serialPort.setFlowControl(SerialPort.FLOWCONTROL_RTSCTS_IN |
-                SerialPort.FLOWCONTROL_RTSCTS_OUT);
+        //serialPort.setFlowControl(SerialPort.FLOWCONTROL_RTSCTS_IN |
+        //        SerialPort.FLOWCONTROL_RTSCTS_OUT);
 
         serialPort.addListener(new PortReader());
         if (flag) {

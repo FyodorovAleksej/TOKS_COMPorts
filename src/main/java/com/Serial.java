@@ -24,7 +24,7 @@ public class Serial implements SerialInterface {
      */
     public boolean write(byte[] bytes) {
         try {
-            return port.writeBytes(bytes);
+            return port.writeBytes(incapsulate(bytes));
         }
         catch (SerialPortException ex) {
             ex.printStackTrace();
@@ -39,7 +39,8 @@ public class Serial implements SerialInterface {
      */
     public byte[] read(int byteCount) {
         try {
-            return port.readBytes(byteCount);
+            byte[] in = port.readBytes(byteCount);
+            return decapsulate(in);
         }
         catch (SerialPortException ex) {
             ex.printStackTrace();
@@ -116,7 +117,7 @@ public class Serial implements SerialInterface {
      * setting parameters for flow control
      * @param mask - the mask of parameters
      */
-    public void setFlowControl(int mask){
+    public void setFlowControl(int mask) {
         try {
             port.setFlowControlMode(mask);
         } catch (SerialPortException ex) {
@@ -130,5 +131,53 @@ public class Serial implements SerialInterface {
      */
     public boolean isOpen(){
         return opened;
+    }
+
+    /**
+     * transform bytes into string format
+     * @param bytes - the byte for transforming
+     * @return - the string format of bytes
+     */
+    private String toBinary( byte[] bytes ) {
+        StringBuilder sb = new StringBuilder(bytes.length * Byte.SIZE);
+        for( int i = 0; i < Byte.SIZE * bytes.length; i++ )
+            sb.append((bytes[i / Byte.SIZE] << i % Byte.SIZE & 0x80) == 0 ? '0' : '1');
+        return sb.toString();
+    }
+
+    /**
+     * transform string into bytes
+     * @param s - the string format
+     * @return - the bytes
+     */
+    private byte[] fromBinary( String s ) {
+        int sLen = s.length();
+        byte[] toReturn = new byte[(sLen + Byte.SIZE - 1) / Byte.SIZE];
+        char c;
+        for (int i = 0; i < sLen; i++ )
+            if( (c = s.charAt(i)) == '1' )
+                toReturn[i / Byte.SIZE] = (byte) (toReturn[i / Byte.SIZE] | (0x80 >>> (i % Byte.SIZE)));
+            else if ( c != '0' )
+                throw new IllegalArgumentException();
+        return toReturn;
+    }
+
+    private byte[] incapsulate(byte[] raw) {
+        String resString = toBinary(raw).replaceAll("11111","111110");
+        resString = "01111110" + resString;
+        return fromBinary(resString);
+    }
+
+    private byte[] decapsulate(byte[] complex) {
+        String temp = toBinary(complex);
+        int start = temp.indexOf("01111110");
+        if (start >= 0) {
+            temp = temp.substring(start + 8);
+            temp = temp.replaceAll("111110", "11111");
+            return fromBinary(temp);
+        }
+        else {
+            return null;
+        }
     }
 }
