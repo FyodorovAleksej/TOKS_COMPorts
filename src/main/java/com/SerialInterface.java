@@ -2,9 +2,9 @@ package com;
 
 public interface SerialInterface {
 
-    boolean write(byte[] bytes, String address, String source);
+    boolean write(byte[] bytes, boolean hemming);
 
-    byte[] read(int bytesCount);
+    byte[] read(int bytesCount, boolean hemming);
 
     boolean open();
 

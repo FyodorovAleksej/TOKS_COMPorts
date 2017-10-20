@@ -9,9 +9,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+
+import static java.lang.Thread.sleep;
 
 public class GUI {
 
@@ -24,7 +25,7 @@ public class GUI {
     private static Serial serialPort;
     private static JComboBox<String> speedBox;
     private static JComboBox<String> portsBox;
-    private static JComboBox<String> adressBox;
+    private static JComboBox<String> codingsBox;
 
 
     /**
@@ -48,18 +49,16 @@ public class GUI {
         String[] ports = SerialPortList.getPortNames();
         JPanel allPanel = new JPanel();
 
-        String[] adresses = SerialPortList.getPortNames();
-        adressBox = new JComboBox<String>(adresses);
+        String[] codings = {"Hemming", "CRC"};
+        codingsBox = new JComboBox<String>(codings);
 
         allPanel.setLayout(new BorderLayout());
         portsBox = new JComboBox<String>(ports);
-        for (String s : ports) {
-            System.out.println(s);
-        }
+
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new GridLayout(2,1));
         leftPanel.add(portsBox);
-        leftPanel.add(adressBox);
+        leftPanel.add(codingsBox);
 
         allPanel.add(leftPanel, BorderLayout.WEST);
 
@@ -118,11 +117,10 @@ public class GUI {
          */
         public void serialEvent(SerialPortEvent event) {
             if(event.isRXCHAR() && event.getEventValue() > 0) {
-                byte[] readBytes = serialPort.read(event.getEventValue());
+                byte[] readBytes = serialPort.read(event.getEventValue(), codingsBox.getSelectedItem().toString().equals("Hemming"));
                 if (readBytes != null) {
                     String result = new String(readBytes);
-                    responseLabel.setText("Response: " + result);
-                    System.out.println(result);
+                    responseLabel.setText(responseLabel.getText() + result);
                     Calendar calendar = new GregorianCalendar();
                     infoLabel.setText("Info: " + Long.toString(calendar.getTimeInMillis()) + " - reading");
                 }
@@ -153,7 +151,38 @@ public class GUI {
      */
     private void sendActionPerformed() {
         connectActionPerformed();
-        serialPort.write(textField.getText().getBytes(), adressBox.getSelectedItem().toString(), portsBox.getSelectedItem().toString());
+        String text = textField.getText();
+        int  i;
+        if (codingsBox.getSelectedItem().toString().equals("Hemming")) {
+            for (i = 0; i < text.length() - 2; ) {
+                StringBuilder builder = new StringBuilder();
+                builder.append(text.charAt(i));
+                i++;
+                builder.append(text.charAt(i));
+                i++;
+                try {
+                    sleep(20);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                serialPort.write(builder.toString().getBytes(), true);
+            }
+            if (i + 1 >= text.length()) {
+                serialPort.write((text.substring(i) + " ").getBytes(), true);
+            } else {
+                serialPort.write(text.substring(i).getBytes(), codingsBox.getSelectedItem().toString().equals("Hemming"));
+            }
+        }
+        else {
+            for (i = 0; i < text.length(); i++) {
+                try {
+                    sleep(20);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                serialPort.write(String.valueOf(text.charAt(i)).getBytes(), false);
+            }
+        }
         Calendar calendar = new GregorianCalendar();
         infoLog(Long.toString(calendar.getTimeInMillis()) + " - sending");
     }
